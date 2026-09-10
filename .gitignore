@@ -1,4 +1,6 @@
 /target
 /pkg
+/arkanoid/pkg
+/tanks/pkg
 Cargo.lock.bak
 .dev-certs/

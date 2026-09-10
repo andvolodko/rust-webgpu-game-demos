@@ -1,63 +1,88 @@
-# Crystal Arkanoid — Rust + wgpu
+# Rust + WebGPU demos
 
-Полірований Arkanoid: скляні кристали, 3D-уламки, bloom, рівні, combo і power-upи.
-Компілюється у WASM і працює в браузері через **WebGPU** (без WebGL2).
+Two games, one engine:
 
-Партікли (~131k: 65 536 уламків + 65 536 іскор) симулюються compute-шейдером на GPU.
-CPU лише емітить spawn.
+| | Crystal Arkanoid | Tanks |
+|---|---|---|
+| Run | `cargo run --release` | `cargo run -p tanks --release` |
+| Web | `/arkanoid/` | `/tanks/` |
 
-## Керування
-- **Мишка / палець / A-D** — рух платформи
-- **Space / клік / тап** — запуск м'яча
-- **Нахил телефону** — платформа + легкий зсув камери
-- **X** — practice: м'яч відбивається від дна, програти не можна
-- **ESC** — пауза
-- **R** — рестарт
-- **1–5** — стрибок на рівень
+Needs **WebGPU** (Chrome / Edge 113+, Firefox, Safari 18+). Not WebGL.
 
-## Power-upи
-Падають з розбитих цеглин (~28%):
-- **Expand** (бірюза) — ширша платформа
-- **Multiball** (золото) — до 3 м'ячів
-- **Slow** (синій) — повільніші м'ячі
-- **Pierce** (фіолет) — м'яч пробиває цеглини
-- **Extra life** (рожевий)
+## Play (native)
 
-Димчасте скло не б’ється, але на 4–5 рівнях завжди є прохід знизу. Combo росте, поки не відіб’єшся від платформи (макс ×8). 5 рівнів, 6 життів.
-
-## Локальний запуск (native)
 ```sh
-cargo run --release
+cargo run --release           # Arkanoid
+cargo run -p tanks --release  # Tanks
 ```
 
-## Збірка в браузер (WASM)
-1. Встановити інструменти (один раз):
+**Arkanoid:** A/D or pointer — paddle · Space/tap — launch · X — practice floor · 1–5 — level · R — restart.  
+Power-ups: expand, slow, pierce, extra life, **multiball (+3 even if you already have 3)**, **laser**.
+
+**Tanks:** 200 GREEN vs 200 STEEL. WASD — pan · LMB drag — orbit · wheel — zoom · R — new battle · **1** — +10 tanks per team.
+
+## Play (browser, local)
+
 ```sh
 rustup target add wasm32-unknown-unknown
 cargo install wasm-pack
+powershell -File scripts/build-web.ps1   # or: bash scripts/build-web.sh
+python serve.py
 ```
 
-2. Зібрати:
+Then open http://localhost:8000  
+From another device on the LAN use **https://IP:8443** (WebGPU requires HTTPS).
+
+`python serve.py` serves the **repo root** (good for day-to-day). `dist/` is the copy GitHub Pages uses.
+
+## Models (Tanks)
+
+All in one folder — no `GREEN/` / `BW/` subdirs:
+
+```
+assets/tanks/models/tank_1_green.glb
+assets/tanks/models/tank_1_bw.glb
+assets/tanks/models/tree.glb … tree4.glb
+```
+
+FBX is not loaded. Convert to a self-contained `.glb` (see `assets/tanks/models/README.md`). Missing files fall back to boxes.
+
+## GitHub Pages
+
+**Advice:** commit `dist/` and let CI only *upload* it. A full `wasm-pack` on Actions works, but the first run pulls a Rust toolchain + wasm-pack (several minutes, extra minutes of billed time). For this repo the wasm is small; checking in `dist/` is simpler and Pages stays online even if Actions is broken.
+
+After you change the web games or assets:
+
 ```sh
-wasm-pack build --target web --release --out-dir pkg
+powershell -File scripts/build-web.ps1
+git add dist
+git commit -m "Rebuild GitHub Pages site"
 ```
 
-3. Запустити сервер (слухає всі інтерфейси, не лише localhost):
-```sh
-python serve.py          # HTTP :8000 + HTTPS :8443 (якщо є openssl)
+Workflow: `.github/workflows/pages.yml`  
+Repo setting: **Settings → Pages → Source: GitHub Actions**.
+
+URL: `https://USER.github.io/REPO/` (asset paths are relative, so a project site works).
+
+## Credits
+
+- Tanks: [FREE stylized tank 3D model](https://mreliptik.itch.io/free-lowpoly-tank-3d-model) by [MrEliptik](https://mreliptik.itch.io) (green / black-and-white variants).
+- Trees: [10+ Free Low Poly Trees Pack](https://crazydrpants.itch.io/free-low-poly-trees-pack) by [CrazyDrPants](https://crazydrpants.itch.io).
+
+This project was built with [Cursor](https://cursor.com) and Grok 4.6.
+
+## Audio
+
+Sounds are synthesized in `crates/engine` (no wav/mp3). Browsers stay silent until the first click or key.
+
+## Layout
+
 ```
-
-4. Відкрити:
-- на цій машині: http://localhost:8000
-- з телефону / іншого ПК в LAN: **https://IP:8443** (самопідписаний сертифікат — Allow / Advanced → Proceed). HTTP з LAN не є secure context, тож WebGPU там не стартує.
-
-> Підтримка: Chrome / Edge 113+, Firefox з WebGPU, Safari 18+. WebGL2 fallback прибрано.
-
-## Архітектура
-- **src/lib.rs** — точки входу `run()` / `start()`
-- **src/app.rs** — winit event loop, ввід, фіксований timestep
-- **src/game/** — платформа, м'ячі, цеглини, рівні, combo, power-upи
-- **src/particles.rs** — CPU-емітер (spawn у GPU storage)
-- **src/gfx/** — рендерер, сцена, HUD, bloom, GPU compute-партікли
-- **src/shaders/** — WGSL (кристалі, bloom, compute-симуляція)
-- **src/math.rs** — Vec2/Vec3/Mat4, AABB, колізії
+crates/engine      shared math, GPU, GLB, tilt, SFX
+crates/arkanoid    Crystal Arkanoid
+crates/tanks       200 vs 200 battle
+assets/tanks/models/
+arkanoid/  tanks/  HTML shells; wasm-pack writes pkg/ (gitignored)
+dist/              static site for GitHub Pages (committed)
+scripts/build-web.ps1 | build-web.sh
+```

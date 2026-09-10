@@ -1,0 +1,16 @@
+{
+  "name": "tanks",
+  "type": "module",
+  "description": "Tanks demo — glTF/GLB models on wgpu",
+  "version": "0.1.0",
+  "files": [
+    "tanks_bg.wasm",
+    "tanks.js",
+    "tanks.d.ts"
+  ],
+  "main": "tanks.js",
+  "types": "tanks.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

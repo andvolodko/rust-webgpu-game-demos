@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>Tanks — Rust + wgpu</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #05070c;
+      color: #d7e7f5;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      overflow: hidden;
+      touch-action: none;
+    }
+    #canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      outline: none;
+      cursor: grab;
+    }
+    #status {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+      pointer-events: none;
+      transition: opacity .4s;
+      z-index: 3;
+    }
+    #status.hide { opacity: 0; }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid #223044;
+      border-top-color: #9fef9a;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #hud-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 28px 24px 36px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+    }
+    #overlay-panel {
+      backdrop-filter: blur(14px);
+      background: linear-gradient(180deg, rgba(40, 70, 55, 0.22), rgba(12, 18, 16, 0.38));
+      border: 1px solid rgba(160, 255, 190, 0.18);
+      box-shadow: 0 12px 40px rgba(0, 10, 30, 0.35), inset 0 1px 0 rgba(255,255,255,0.12);
+      border-radius: 16px;
+      padding: 18px 28px 16px;
+      text-align: center;
+      max-width: 560px;
+    }
+    #overlay-msg {
+      font-size: 16px;
+      color: #e8fff0;
+      min-height: 1.2em;
+    }
+    #overlay-help {
+      margin-top: 10px;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: rgba(180, 210, 230, 0.7);
+      line-height: 1.55;
+    }
+    a.back {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 4;
+      color: rgba(180, 210, 230, 0.75);
+      text-decoration: none;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body>
+  <a class="back" href="../">← demos</a>
+  <canvas id="canvas" tabindex="0"></canvas>
+  <div id="hud-overlay">
+    <div id="overlay-panel">
+      <div id="overlay-msg">Loading models…</div>
+      <div id="overlay-help">
+        WASD — pan · LMB drag — orbit · wheel — zoom · R — new battle · 1 — +10 tanks per team<br>
+        GREEN vs STEEL · shells, explosions, tread dust · trees as cover
+      </div>
+    </div>
+  </div>
+  <div id="status">
+    <div class="spinner"></div>
+    <div>Loading WASM…</div>
+  </div>
+  <script type="module">
+    const status = document.getElementById('status');
+    const setStatus = (msg) => { status.querySelector('div:last-child').textContent = msg; };
+
+    async function boot() {
+      if (!('gpu' in navigator)) {
+        setStatus('WebGPU required (Chrome / Edge 113+, Firefox, Safari 18+).');
+        status.querySelector('.spinner').style.display = 'none';
+        return;
+      }
+      try {
+        const wasm = await import('./pkg/tanks.js');
+        await wasm.default();
+        wasm.start();
+        status.classList.add('hide');
+        const canvas = document.getElementById('canvas');
+        canvas.addEventListener('pointerdown', () => {
+          canvas.focus();
+          if (typeof wasm.unlock_audio === 'function') wasm.unlock_audio();
+        });
+        window.addEventListener('keydown', (e) => {
+          if (e.repeat) return;
+          if (e.code === 'Digit1' || e.code === 'Numpad1') {
+            e.preventDefault();
+            if (typeof wasm.add_tanks === 'function') wasm.add_tanks();
+          }
+        });
+        wireDrop(wasm);
+      } catch (e) {
+        console.error(e);
+        setStatus('Load error: ' + e);
+        status.querySelector('.spinner').style.display = 'none';
+      }
+    }
+
+    function wireDrop(wasm) {
+      const send = (file) => {
+        file.arrayBuffer().then((buf) => {
+          if (typeof wasm.load_glb_bytes === 'function') {
+            wasm.load_glb_bytes(new Uint8Array(buf));
+          }
+        });
+      };
+      window.addEventListener('dragover', (e) => { e.preventDefault(); });
+      window.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (f) send(f);
+      });
+    }
+
+    boot();
+  </script>
+</body>
+</html>

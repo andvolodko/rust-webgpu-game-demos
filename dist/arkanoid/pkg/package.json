@@ -1,0 +1,16 @@
+{
+  "name": "arkanoid",
+  "type": "module",
+  "description": "Crystal Arkanoid — Rust + wgpu, native and WASM",
+  "version": "0.1.0",
+  "files": [
+    "arkanoid_bg.wasm",
+    "arkanoid.js",
+    "arkanoid.d.ts"
+  ],
+  "main": "arkanoid.js",
+  "types": "arkanoid.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
