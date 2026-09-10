@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>Crystal Arkanoid — Rust + wgpu</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #05070c;
+      color: #d7e7f5;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      overflow: hidden;
+      touch-action: none;
+    }
+    #canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      outline: none;
+      cursor: none;
+    }
+    #status {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+      pointer-events: none;
+      transition: opacity .4s;
+      z-index: 3;
+    }
+    #status.hide { opacity: 0; }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid #223044;
+      border-top-color: #7ce7ff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #hud-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 28px 24px 36px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+    }
+    #hud-overlay[data-playing="1"] #overlay-panel {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    #overlay-level {
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+      color: #9fd7ff;
+      text-shadow: 0 0 16px rgba(120, 210, 255, 0.45);
+    }
+    #overlay-panel {
+      backdrop-filter: blur(14px);
+      background: linear-gradient(180deg, rgba(40, 70, 95, 0.22), rgba(12, 18, 28, 0.38));
+      border: 1px solid rgba(160, 220, 255, 0.22);
+      box-shadow: 0 12px 40px rgba(0, 10, 30, 0.35), inset 0 1px 0 rgba(255,255,255,0.12);
+      border-radius: 16px;
+      padding: 18px 28px 16px;
+      text-align: center;
+      max-width: 520px;
+      transition: opacity .35s, transform .35s;
+    }
+    #overlay-msg {
+      font-size: 18px;
+      color: #e8f6ff;
+      min-height: 1.2em;
+      text-shadow: 0 0 18px rgba(140, 220, 255, 0.4);
+    }
+    #overlay-help {
+      margin-top: 10px;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: rgba(180, 210, 230, 0.7);
+      line-height: 1.55;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" tabindex="0"></canvas>
+  <div id="hud-overlay" data-playing="0">
+    <div id="overlay-level">LEVEL 1</div>
+    <div id="overlay-panel">
+      <div id="overlay-msg">CLICK / SPACE  —  launch</div>
+      <div id="overlay-help">
+        A D / палець / нахил — платформа · тап — запуск · X practice (дно відбиває)<br>
+        1–5 рівень · R рестарт · ESC пауза · бонуси падають частіше
+      </div>
+    </div>
+  </div>
+  <div id="status">
+    <div class="spinner"></div>
+    <div>Завантаження WASM…</div>
+  </div>
+  <script type="module">
+    const status = document.getElementById('status');
+    const setStatus = (msg) => { status.querySelector('div:last-child').textContent = msg; };
+
+    async function boot() {
+      if (!('gpu' in navigator)) {
+        setStatus('Потрібен WebGPU (Chrome / Edge 113+, Firefox, Safari 18+). WebGL2 більше не підтримується — compute-партікли.');
+        status.querySelector('.spinner').style.display = 'none';
+        return;
+      }
+      try {
+        const wasm = await import('./pkg/rust_webgpu_game.js');
+        await wasm.default();
+        wasm.start();
+        status.classList.add('hide');
+        wireTilt(wasm);
+      } catch (e) {
+        console.error(e);
+        setStatus('Помилка завантаження: ' + e);
+        status.querySelector('.spinner').style.display = 'none';
+      }
+    }
+    function wireTilt(wasm) {
+      const send = (g, b) => {
+        if (typeof wasm.set_tilt === 'function') wasm.set_tilt(g, b);
+      };
+      const onOrient = (e) => {
+        if (e.gamma == null || e.beta == null) return;
+        send(e.gamma, e.beta);
+      };
+      let listening = false;
+      const enable = async () => {
+        try {
+          const DOE = window.DeviceOrientationEvent;
+          if (DOE && typeof DOE.requestPermission === 'function') {
+            await DOE.requestPermission();
+          }
+        } catch (_) {}
+        if (listening) return;
+        listening = true;
+        window.addEventListener('deviceorientation', onOrient, true);
+      };
+      window.addEventListener('pointerdown', () => { enable(); }, { once: true });
+      enable();
+    }
+
+    boot();
+  </script>
+</body>
+</html>

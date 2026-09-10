@@ -1,0 +1,38 @@
+[package]
+name = "rust_webgpu_game"
+version = "0.1.0"
+edition = "2021"
+description = "Minimal Arkanoid demo in pure Rust + wgpu, running on native and in the browser via WASM"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wgpu = { version = "30.0", default-features = true, features = ["webgpu"] }
+winit = "0.30"
+bytemuck = { version = "1", features = ["derive"] }
+web-time = "1"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+pollster = "0.4"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+console_error_panic_hook = "0.1"
+web-sys = { version = "0.3", features = ["HtmlCanvasElement", "Window", "Document", "Element", "Node"] }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
+
+# Сучасний rustc (1.87+) генеруєInstructions bulk-memory (memory.copy/fill),
+# а bundled wasm-opt у wasm-pack потребує явного дозволу цих фіч.
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-Oz", "--enable-bulk-memory", "--enable-nontrapping-float-to-int"]
+
+[package.metadata.wasm-pack.profile.dev]
+wasm-opt = ["-O0", "--enable-bulk-memory", "--enable-nontrapping-float-to-int"]
