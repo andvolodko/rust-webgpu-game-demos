@@ -1,13 +1,17 @@
 # Rust + WebGPU demos
 
-Two games, one engine:
+Two games, one engine. Play in the browser (needs **WebGPU** — Chrome / Edge 113+, Firefox, Safari 18+; not WebGL):
 
 | | Crystal Arkanoid | Tanks |
 |---|---|---|
-| Run | `cargo run --release` | `cargo run -p tanks --release` |
-| Web | `/arkanoid/` | `/tanks/` |
+| Play | [arkanoid](https://andvolodko.github.io/rust-webgpu-game-demos/arkanoid/) | [tanks](https://andvolodko.github.io/rust-webgpu-game-demos/tanks/) |
+| Native | `cargo run --release` | `cargo run -p tanks --release` |
+| Video | [YouTube](https://youtu.be/-DYVd8dUQsk) | [YouTube](https://youtu.be/E8rAkcKtTYc) |
 
-Needs **WebGPU** (Chrome / Edge 113+, Firefox, Safari 18+). Not WebGL.
+Hub: [andvolodko.github.io/rust-webgpu-game-demos](https://andvolodko.github.io/rust-webgpu-game-demos/)
+
+[![Crystal Arkanoid in Rust + WebGPU](https://img.youtube.com/vi/-DYVd8dUQsk/hqdefault.jpg)](https://youtu.be/-DYVd8dUQsk)
+[![400 Tanks Battle in Rust + WebGPU](https://img.youtube.com/vi/E8rAkcKtTYc/hqdefault.jpg)](https://youtu.be/E8rAkcKtTYc)
 
 ## Play (native)
 
@@ -62,7 +66,7 @@ git commit -m "Rebuild GitHub Pages site"
 Workflow: `.github/workflows/pages.yml`  
 Repo setting: **Settings → Pages → Source: GitHub Actions**.
 
-URL: `https://USER.github.io/REPO/` (asset paths are relative, so a project site works).
+Live site: [andvolodko.github.io/rust-webgpu-game-demos](https://andvolodko.github.io/rust-webgpu-game-demos/)
 
 ## Credits
 
